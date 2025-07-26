@@ -15,6 +15,6 @@ A service that stores user data and segments to which users belong on VK platfor
 Запуск
 
 1. Поднимаем PostgresSQL
-   \```
-  docker-compose up -d  
-   \```
+```golang
+docker-compose up -d  
+```
