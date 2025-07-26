@@ -1,12 +1,12 @@
 # vk-segments-service
 A service that stores user data and segments to which users belong on VK platforms
 
- Микросервис для управления пользовательскими сегментами. Позволяет:
+__Позволяет:__
 ✅ Создавать, удалять и просматривать сегменты
 ✅ Добавлять/удалять пользователей в сегменты
 ✅ Распределять сегменты на % пользователей
 
-Технологии
+__Технологии__
 
 Язык: Go
 База данных: PostgreSQL
@@ -14,7 +14,22 @@ A service that stores user data and segments to which users belong on VK platfor
 
 Запуск
 
-1. Поднимаем PostgresSQL
-```go
-docker-compose up -d  
-```
+__1. Поднять бд PostgresSQL:__
+   ```
+   docker-compose up -d  
+   ```
+__2. Запустить сервер:__
+   ```
+   go run cmd/app/main.go  
+
+- API Endpoints
+
+- __POST__ /segments – создать сегмент
+
+- __GET__ /segments – список всех сегментов
+
+- __POST__ /users/:id/segments – добавить пользователя в сегмент
+
+- __GET__ /users/:id/segments – сегменты пользователя
+
+Пример запроса
