@@ -23,7 +23,7 @@ __2. Запустить сервер:__
    go run cmd/app/main.go  
    ```
 
-- API Endpoints
+__API Endpoints__
 
 - __POST__ /segments – создать сегмент
 
