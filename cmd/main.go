@@ -4,7 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"net/http"
+	"strconv"
 
+	"github.com/gin-gonic/gin"
 	_ "github.com/lib/pq"
 )
 
@@ -111,9 +114,20 @@ func (s *SegmentService) GetUserSegments(userID int) ([]string, error) {
 
 // DistributeSegment распределяет сегмент среди % пользователей
 func (s *SegmentService) DistributeSegment(segmentSlug string, percent int) error {
+	// Проверяем существование сегмента
+	var exists bool
+	err := s.db.QueryRow("SELECT EXISTS(SELECT 1 FROM segments WHERE slug = $1)", segmentSlug).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("failed to check segment existence: %w", err)
+	}
+	if !exists {
+		return fmt.Errorf("segment %s does not exist", segmentSlug)
+
+		// Остальная логика метода...
+	}
 	// Получаем общее количество пользователей
 	var totalUsers int
-	err := s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&totalUsers)
+	err = s.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&totalUsers)
 	if err != nil {
 		return fmt.Errorf("failed to count users: %w", err)
 	}
@@ -175,28 +189,149 @@ func main() {
 	// Инициализация сервиса
 	service := NewSegmentService(db)
 
-	// Пример использования
-	if err := service.CreateSegment("MAIL_GPT"); err != nil {
-		log.Printf("Error creating segment: %v", err)
-	}
+	// Инициализация Gin роутера
+	r := gin.Default()
 
-	// Добавляем тестовых пользователей
-	for i := 1; i <= 10; i++ {
-		if err := service.AddUserToSegment(i, "MAIL_GPT"); err != nil {
-			log.Printf("Error adding user %d: %v", i, err)
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "OK"})
+	})
+
+	r.GET("/segments", func(c *gin.Context) {
+		rows, err := db.Query("SELECT slug FROM segments")
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
-	}
+		defer rows.Close()
 
-	// Распределяем сегмент
-	if err := service.DistributeSegment("CLOUD_DISCOUNT_30", 30); err != nil {
-		log.Printf("Error distributing segment: %v", err)
-	}
+		var segments []string
+		for rows.Next() {
+			var slug string
+			if err := rows.Scan(&slug); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			segments = append(segments, slug)
+		}
 
-	// Получаем сегменты пользователя
-	segments, err := service.GetUserSegments(1)
-	if err != nil {
-		log.Printf("Error getting user segments: %v", err)
-	} else {
-		log.Printf("User 1 segments: %v", segments)
+		c.JSON(http.StatusOK, gin.H{"segments": segments})
+	})
+
+	// Endpoint для создания сегмента
+	r.POST("/segments", func(c *gin.Context) {
+		var input struct {
+			Slug string `json:"slug" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := service.CreateSegment(input.Slug); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusCreated, gin.H{"status": "segment created"})
+	})
+
+	// Endpoint для удаления сегмента
+	r.DELETE("/segments/:slug", func(c *gin.Context) {
+		slug := c.Param("slug")
+
+		if err := service.DeleteSegment(slug); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "segment deleted"})
+	})
+
+	// Endpoint для добавления пользователя в сегмент
+	r.POST("/users/:id/segments", func(c *gin.Context) {
+		userID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+			return
+		}
+
+		var input struct {
+			SegmentSlug string `json:"segment_slug" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := service.AddUserToSegment(userID, input.SegmentSlug); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "user added to segment"})
+	})
+
+	// Endpoint для удаления пользователя из сегмента
+	r.DELETE("/users/:id/segments/:slug", func(c *gin.Context) {
+		userID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+			return
+		}
+
+		slug := c.Param("slug")
+
+		if err := service.RemoveUserFromSegment(userID, slug); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "user removed from segment"})
+	})
+
+	// Endpoint для получения сегментов пользователя
+	r.GET("/users/:id/segments", func(c *gin.Context) {
+		userID, err := strconv.Atoi(c.Param("id"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+			return
+		}
+
+		segments, err := service.GetUserSegments(userID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"segments": segments})
+	})
+
+	// Endpoint для распределения сегмента
+	r.POST("/segments/:slug/distribute", func(c *gin.Context) {
+		slug := c.Param("slug")
+
+		var input struct {
+			Percent int `json:"percent" binding:"required"`
+		}
+
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if err := service.DistributeSegment(slug, input.Percent); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"status": "segment distributed"})
+	})
+
+	// Запуск сервера
+	log.Println("Starting server on :8080")
+	if err := r.Run(":8080"); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
 	}
 }
