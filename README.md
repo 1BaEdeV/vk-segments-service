@@ -1,16 +1,15 @@
 # vk-segments-service
 A service that stores user data and segments to which users belong on VK platforms
 
-__Позволяет:__
+__Позволяет:__  
 ✅ Создавать, удалять и просматривать сегменты  
 ✅ Добавлять/удалять пользователей в сегменты  
 ✅ Распределять сегменты на % пользователей
 
-__Технологии__
-
-Язык: Go  
-База данных: PostgreSQL  
-Фреймворк: Gin (HTTP-роутинг)
+__Технологии__  
+Язык: _Go_  
+База данных: _PostgreSQL_  
+Фреймворк: _Gin_ (HTTP-роутинг)
 
 Запуск
 
