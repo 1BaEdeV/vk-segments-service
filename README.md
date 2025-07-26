@@ -15,12 +15,13 @@ __Технологии__
 Запуск
 
 __1. Поднять бд PostgresSQL:__
-   ```
+   ```bash
    docker-compose up -d  
    ```
 __2. Запустить сервер:__
-   ```
+   ```bash
    go run cmd/app/main.go  
+   ```
 
 - API Endpoints
 
@@ -33,3 +34,8 @@ __2. Запустить сервер:__
 - __GET__ /users/:id/segments – сегменты пользователя
 
 Пример запроса
+```bash
+curl -X POST http://localhost:8080/segments/MAIL_GPT/distribute \
+  -H "Content-Type: application/json" \
+  -d '{"percent":30}'
+```bash
