@@ -2,14 +2,14 @@
 A service that stores user data and segments to which users belong on VK platforms
 
 __Позволяет:__
-✅ Создавать, удалять и просматривать сегменты
-✅ Добавлять/удалять пользователей в сегменты
+✅ Создавать, удалять и просматривать сегменты  
+✅ Добавлять/удалять пользователей в сегменты  
 ✅ Распределять сегменты на % пользователей
 
 __Технологии__
 
-Язык: Go
-База данных: PostgreSQL
+Язык: Go  
+База данных: PostgreSQL  
 Фреймворк: Gin (HTTP-роутинг)
 
 Запуск
@@ -33,7 +33,7 @@ __API Endpoints__
 
 - __GET__ /users/:id/segments – сегменты пользователя
 
-Пример запроса
+Пример запроса:
 ```bash
 curl -X POST http://localhost:8080/segments/MAIL_GPT/distribute \
   -H "Content-Type: application/json" \
